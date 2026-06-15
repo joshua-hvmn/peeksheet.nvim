@@ -5,22 +5,22 @@ A simple lazy.nvim plugin that shows a personal cheatsheet, which automatically 
 Minimal default config:
 ```
 return {
-'joshua-hvmn/peeksheet.nvim',
-lazy = false,
-config = function()
+  'joshua-hvmn/peeksheet.nvim',
+  lazy = false,
+  config = function()
     require('peeksheet').setup {}
-end,
+  end,
 }
 ```
 
 Example config showing default settings and `<leader>h` keymap for the `:Peeksheet` command
 ```
 return {
-'joshua-hvmn/peeksheet.nvim',
-lazy = false,
-config = function()
+  'joshua-hvmn/peeksheet.nvim',
+  lazy = false,
+  config = function()
     require('peeksheet').setup({
-      peeksheet_path = vim.fn.stdpath("config") .. "/peeksheet/peeksheet.md",
+      peeksheet_path = vim.fn.stdpath("config") .. "/peeksheet.md",
       width_ratio = 0.65,
       height_ratio = 0.75,
       title = "💡 Peeksheet 💡",
@@ -37,10 +37,11 @@ config = function()
         "<Right>",
         "<Up>",
         "<Down>",
+      },
     })
-end,
-keys = {
+  end,
+  keys = {
     { '<leader>h', '<cmd>Peeksheet<CR>', desc = 'Open Peeksheet' },
-},
+  },
 }
 ```
