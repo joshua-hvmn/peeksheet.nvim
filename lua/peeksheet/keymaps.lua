@@ -81,9 +81,19 @@ function M.generate_keymap_section()
 	for group, _ in pairs(groups) do
 		table.insert(sorted_groups, group)
 	end
+
+	local function get_index(tbl, value)
+		for index, val in ipairs(tbl) do
+			if val == value then
+				return index
+			end
+		end
+		return 999
+	end
+
 	table.sort(sorted_groups, function(a, b)
-		local idx_a = vim.indexof(group_order, a) or 999
-		local idx_b = vim.indexof(group_order, b) or 999
+		local idx_a = get_index(group_order, a)
+		local idx_b = get_index(group_order, b)
 		return idx_a < idx_b
 	end)
 

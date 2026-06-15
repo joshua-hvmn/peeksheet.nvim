@@ -52,15 +52,19 @@ function M.open()
 		title_pos = "center",
 	})
 
+	-- Apply keymaps
+	M.setup_buffer_keymaps(buf, win)
+
 	-- Styling
 	vim.api.nvim_set_option_value("filetype", "markdown", { buf = buf })
-	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
-	vim.api.nvim_set_option_value("readonly", true, { buf = buf })
 	vim.wo[win].conceallevel = 2
 	vim.wo[win].concealcursor = "nc"
 	pcall(vim.treesitter.start, buf, "markdown")
 
-	M.setup_buffer_keymaps(buf, win)
+	-- Lock the buffer
+	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+	vim.api.nvim_set_option_value("readonly", true, { buf = buf })
+
 	return buf, win
 end
 
