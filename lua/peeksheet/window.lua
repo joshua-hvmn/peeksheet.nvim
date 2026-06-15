@@ -65,6 +65,9 @@ function M.open()
 	vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 	vim.api.nvim_set_option_value("readonly", true, { buf = buf })
 
+	-- wipe buffer
+	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+
 	return buf, win
 end
 
