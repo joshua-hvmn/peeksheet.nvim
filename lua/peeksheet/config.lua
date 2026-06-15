@@ -1,7 +1,7 @@
 local M = {}
 
 M.defaults = {
-	peeksheet_path = vim.fn.stdpath("config") .. "/lua/peeksheet/peeksheet.md",
+	peeksheet_path = vim.fn.stdpath("config") .. "/peeksheet/peeksheet.md",
 	width_ratio = 0.65,
 	height_ratio = 0.75,
 	title = "💡 Peeksheet 💡",
