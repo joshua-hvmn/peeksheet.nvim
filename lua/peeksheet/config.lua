@@ -1,13 +1,24 @@
 local M = {}
 
 M.defaults = {
-	peeksheet_path = vim.fn.stdpath("config") .. "/lua/core/peeksheet.md",
+	peeksheet_path = vim.fn.stdpath("config") .. "/lua/peeksheet/peeksheet.md",
 	width_ratio = 0.65,
 	height_ratio = 0.75,
-	title = "💡 Peeksheet",
+	title = "💡 Peeksheet 💡",
 	border = "rounded",
 	enable_search = true,
 	enable_keymap_section = true,
+	show_buffer_keymaps = true,
+	ignored_keymaps = {
+		"ZZ",
+		"ZQ",
+		"<Ignore>",
+		"<Nop>",
+		"<Left>",
+		"<Right>",
+		"<Up>",
+		"<Down>",
+	},
 }
 
 M.options = {}
