@@ -82,8 +82,8 @@ function M.generate_keymap_section()
 		table.insert(sorted_groups, group)
 	end
 	table.sort(sorted_groups, function(a, b)
-		local idx_a = vim.tbl_contains(group_order, a) and vim.tbl_index_of(group_order, a) or 999
-		local idx_b = vim.tbl_contains(group_order, b) and vim.tbl_index_of(group_order, b) or 999
+		local idx_a = vim.indexof(group_order, a) or 999
+		local idx_b = vim.indexof(group_order, b) or 999
 		return idx_a < idx_b
 	end)
 
