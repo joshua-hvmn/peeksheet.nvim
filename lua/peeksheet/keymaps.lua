@@ -23,8 +23,7 @@ local function get_group_key(lhs)
 	lhs = format_lhs(lhs)
 
 	if lhs:find("^<leader>") then
-		local prefix = lhs:match("^<leader>[^%s<]") or "<leader>"
-		return prefix
+		return "<leader>"
 	elseif lhs:find("^<localleader>") then
 		return "<localleader>"
 	elseif lhs:find("^<C%-") then
@@ -99,8 +98,17 @@ function M.generate_keymap_section()
 	for _, group in ipairs(sorted_groups) do
 		if #groups[group] > 0 then
 			table.insert(lines, "### " .. group)
-			-- sort mappings inside each group
-			table.sort(groups[group])
+			-- Alphabetical sort within groups
+			table.sort(groups[group], function(a, b)
+				local lhs_a = a:match("`([^`]+)`") or a
+				local lhs_b = b:match("`([^`]+)`") or b
+				local lower_a = lhs_a:lower()
+				local lower_b = lhs_b:lower()
+				if lower_a = lower_b then
+					return lhs_a > lhs_b
+				end
+				return lower_a < lower_b
+			end)	
 			vim.list_extend(lines, groups[group])
 			table.insert(lines, "")
 		end
