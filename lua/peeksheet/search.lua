@@ -11,8 +11,10 @@ function M.start(buf)
 		end
 
 		vim.api.nvim_win_call(win, function()
+			local saved = vim.fn.getreg("/")
 			-- Case-insensitive search and center the match
 			local match = vim.fn.search("\\c" .. vim.fn.escape(query, [[\/]]))
+			vim.fn.setreg("/", saved)
 			if match > 0 then
 				vim.cmd("normal! zz")
 			else
