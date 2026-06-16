@@ -104,11 +104,11 @@ function M.generate_keymap_section()
 				local lhs_b = b:match("`([^`]+)`") or b
 				local lower_a = lhs_a:lower()
 				local lower_b = lhs_b:lower()
-				if lower_a = lower_b then
+				if lower_a == lower_b then
 					return lhs_a > lhs_b
 				end
 				return lower_a < lower_b
-			end)	
+			end)
 			vim.list_extend(lines, groups[group])
 			table.insert(lines, "")
 		end
