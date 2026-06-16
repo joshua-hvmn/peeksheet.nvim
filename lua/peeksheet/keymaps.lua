@@ -7,8 +7,7 @@ local function format_lhs(lhs)
 
 	-- convert space to <leader>
 	if leader == " " or leader == "<Space>" then
-		lhs = lhs:gsub("^ ", "<leader>")
-		lhs = lhs:gsub("<Space>", "<leader>")
+		lhs = lhs:gsub("^ ", "<leader>"):gsub("<Space>", "<leader>")
 	end
 	-- You can add more replacements here (e.g. <LocalLeader>)
 	local local_leader = vim.g.maplocalleader
@@ -107,7 +106,7 @@ function M.generate_keymap_section()
 		end
 	end
 
-	if #lines == 1 then
+	if #lines <= 2 then
 		table.insert(lines, "No keymaps with descriptions found.")
 	end
 

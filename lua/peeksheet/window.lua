@@ -2,12 +2,14 @@ local M = {}
 local config = require("peeksheet.config")
 
 function M.setup_buffer_keymaps(buf, win)
-	-- Close with q
-	vim.keymap.set("n", "q", function()
+	local function close_win()
 		if vim.api.nvim_win_is_valid(win) then
 			vim.api.nvim_win_close(win, true)
 		end
-	end, { buffer = buf, silent = true, nowait = true })
+	end
+	-- Close with q or esc
+	vim.keymap.set("n", "q", close_win, { buffer = buf, silent = true, nowait = true })
+	vim.keymap.set("n", "<Esc>", close_win, { buffer = buf, silent = true, nowait = true })
 
 	-- Search Binding
 	if config.options.enable_search then
