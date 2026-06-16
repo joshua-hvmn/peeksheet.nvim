@@ -24,9 +24,9 @@ function M.setup_buffer_keymaps(buf, win, raw_lines, width)
   end
 
   -- Edit peeksheet.md
-  vim.keymap.set('n', '/', function()
-    require('peeksheet.search').start(buf)
-  end, { buffer = buf, silent = true, desc = 'Search Peeksheet' })
+  vim.keymap.set('n', 'e', function()
+    M.open_edit_mode(buf, win)
+  end, { buffer = buf, silent = true, desc = 'Edit Peeksheet' })
 end
 
 function M.open_edit_mode(buf, win)
