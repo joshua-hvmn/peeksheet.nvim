@@ -67,7 +67,7 @@ local function rewrite_lhs_in_file(filepath, lnum, old_lhs, new_lhs)
     return false, 'Failed to write file'
   end
 
-  return nil, nil
+  return true, nil
 end
 
 local function apply_live_remap(map, old_lhs, new_lhs)
@@ -101,7 +101,7 @@ function M.remap_at_cursor(buf, win, reload_fn)
 
   local lhs = parse_lhs(line)
   if not lhs then
-    vim.notify('No keymap found on this line.', vim.log.leves.WARN)
+    vim.notify('No keymap found on this line.', vim.log.levels.WARN)
     return
   end
 
