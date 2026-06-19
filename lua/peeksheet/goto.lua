@@ -6,15 +6,8 @@ local function parse_lhs(line)
 end
 
 -- verbose map to find source file and line number
-local function get_map_source(lhs)
-  local leader = vim.g.mapleader or ' '
-  local raw_lhs = lhs:gsub('<leader>', leader)
-  local ok, output = pcall(vim.fn.execute, 'verbose nmap ' .. raw_lhs)
-  vim.defer_fn(function()
-    -- vim.notify('source: ' .. tostring(filepath), vim.log.levels.INFO)
-    -- vim.notify('config: ' .. vim.fn.stdpath 'config', vim.log.levels.INFO)
-    vim.notify('raw output: [' .. tostring(output) .. ']', vim.log.levels.INFO)
-  end, 500)
+local function get_map_source(map)
+  local ok, output = pcall(vim.fn.execute, 'verbose nmap ' .. vim.fn.escape(map.lhs, ' '))
 
   if not ok or not output then
     return nil, nil
@@ -24,8 +17,7 @@ local function get_map_source(lhs)
   local lnum = output:match 'Last set from [^\n]+ line (%d+)'
 
   if filepath and lnum then
-    filepath = vim.fn.expand(filepath)
-    return filepath, tonumber(lnum)
+    return vim.fn.expand(filepath), tonumber(lnum)
   end
 
   return nil, nil
@@ -121,7 +113,7 @@ function M.remap_at_cursor(buf, win, reload_fn)
     return
   end
 
-  local filepath, lnum = get_map_source(lhs)
+  local filepath, lnum = get_map_source(map)
   local config_dir = vim.fn.stdpath 'config'
   local in_config = filepath and filepath:find(config_dir, 1, true)
 
