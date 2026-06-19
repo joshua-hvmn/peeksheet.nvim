@@ -39,7 +39,7 @@ function M.reload_view(buf, win, width)
   vim.api.nvim_set_option_value('modifiable', true, { buf = buf })
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
-  vim.api.nvim_set_option_value('readonly', true, { buf = buf })
+  -- vim.api.nvim_set_option_value('readonly', true, { buf = buf })
 
   vim.api.nvim_win_set_config(win, {
     title = config.options.title,
@@ -55,7 +55,7 @@ function M.open_edit_mode(buf, win, width)
 
   -- Unlock buffer
   vim.api.nvim_set_option_value('modifiable', true, { buf = buf })
-  vim.api.nvim_set_option_value('readonly', false, { buf = buf })
+  -- vim.api.nvim_set_option_value('readonly', false, { buf = buf })
 
   -- Load raw peeksheet.md content
   local edit_lines = vim.fn.filereadable(path) == 1 and vim.fn.readfile(path) or { '# My Peeksheet', '', 'Add your custom notes here.' }
@@ -133,14 +133,23 @@ function M.open()
   local win = vim.api.nvim_open_win(buf, true, {
     relative = 'editor',
     width = width,
-    height = height,
+    height = height - 1,
     col = col,
     row = row,
-    style = 'minimal',
+    -- style = 'minimal',
     border = config.options.border,
     title = config.options.title,
     title_pos = 'center',
   })
+
+  -- manually suppress what minimal would have suppressed, except statusline
+  vim.wo[win].number = false
+  vim.wo[win].relativenumber = false
+  vim.wo[win].cursorline = false
+  vim.wo[win].signcolumn = 'no'
+  vim.wo[win].foldcolumn = '0'
+  vim.wo[win].colorcolumn = ''
+  vim.wo[win].list = false
 
   -- Apply keymaps
   M.setup_buffer_keymaps(buf, win, width)
@@ -153,7 +162,7 @@ function M.open()
 
   -- Lock the buffer
   vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
-  vim.api.nvim_set_option_value('readonly', true, { buf = buf })
+  -- vim.api.nvim_set_option_value('readonly', true, { buf = buf })
 
   -- wipe buffer
   vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf })

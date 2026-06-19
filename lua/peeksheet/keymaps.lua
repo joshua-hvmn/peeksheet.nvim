@@ -35,10 +35,42 @@ local function get_group_key(lhs)
   end
 end
 
+local function get_editable_lhs_set()
+  local keymaps_file = config.options.keymaps_file
+  local set = {}
+
+  if not keymaps_file or vim.fn.filereadable(keymaps_file) == 0 then
+    return set
+  end
+
+  local file_lines = vim.fn.readfile(keymaps_file)
+  for _, line in ipairs(file_lines) do
+    for token in line:gmatch '["\'](<[^"\']+>[^"\']*)["\']' do
+      set[token] = true
+    end
+    for token in line:gmatch '["\']( [^"\']*)["\']' do
+      set[token] = true
+    end
+  end
+
+  return set
+end
+
 function M.generate_keymap_section()
   local lines = { '## Auto-Detected Keymaps', '' }
+  local editable_set = get_editable_lhs_set()
+
+  -- legend
+  table.insert(lines, '✏️ = editable via `e` (defined in your keymaps file)')
+  table.insert(lines, '')
+
   local ignored = config.options.ignored_keymaps or {}
   local groups = {}
+
+  local function is_editable(lhs)
+    local nice_lhs = format_lhs(lhs)
+    return editable_set[lhs] or editable_set[nice_lhs]
+  end
 
   local function add_mapping(lhs, desc, suffix)
     if vim.tbl_contains(ignored, lhs) then
@@ -46,7 +78,8 @@ function M.generate_keymap_section()
     end
     local nice_lhs = format_lhs(lhs)
     local group = get_group_key(lhs)
-    local text = string.format('- `%s` → %s%s', nice_lhs, desc, suffix or '')
+    local marker = is_editable(lhs) and '→ ✏️' or '→'
+    local text = string.format('- `%s` %s %s%s', nice_lhs, marker, desc, suffix or '')
 
     groups[group] = groups[group] or {}
     table.insert(groups[group], text)
@@ -80,19 +113,13 @@ function M.generate_keymap_section()
     table.insert(sorted_groups, group)
   end
 
-  local function get_index(tbl, value)
-    for index, val in ipairs(tbl) do
-      if val == value then
-        return index
-      end
-    end
-    return 999
+  local order_index = {}
+  for i, g in ipairs(group_order) do
+    order_index[g] = i
   end
 
   table.sort(sorted_groups, function(a, b)
-    local idx_a = get_index(group_order, a)
-    local idx_b = get_index(group_order, b)
-    return idx_a < idx_b
+    return (order_index[a] or 999) < (order_index[b] or 999)
   end)
 
   for _, group in ipairs(sorted_groups) do
@@ -114,7 +141,7 @@ function M.generate_keymap_section()
     end
   end
 
-  if #lines <= 2 then
+  if #lines <= 4 then
     table.insert(lines, 'No keymaps with descriptions found.')
   end
 
