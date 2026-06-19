@@ -67,8 +67,20 @@ function M.generate_keymap_section()
   local ignored = config.options.ignored_keymaps or {}
   local groups = {}
 
+  local function normalize_ctrl_case(s)
+    return s:gsub('<C%-(%a)>', function(letter)
+      return '<C-' .. letter:upper() .. '>'
+    end)
+  end
+
   local function is_editable(lhs)
     local nice_lhs = format_lhs(lhs)
+    local norm_nice = normalize_ctrl_case(lhs)
+    for key in pairs(editable_set) do
+      if normalize_ctrl_case(key) == norm_nice then
+        return true
+      end
+    end
     return editable_set[lhs] or editable_set[nice_lhs]
   end
 

@@ -19,6 +19,15 @@ local function set_header_text(text)
   end
 end
 
+local function set_header_title(title)
+  if header_win and vim.api.nvim_win_is_valid(header_win) then
+    vim.api.nvim_win_set_config(header_win, {
+      title = title,
+      title_pos = 'center',
+    })
+  end
+end
+
 local function open_header(width, col, row)
   header_buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(header_buf, 0, -1, false, { VIEW_HEADER })
@@ -31,6 +40,8 @@ local function open_header(width, col, row)
     row = row,
     style = 'minimal',
     border = { '╭', '─', '╮', '│', '', '', '', '│' },
+    title = config.options.title,
+    title_pos = 'center',
     focusable = false,
     zindex = 60,
   })
@@ -85,13 +96,10 @@ function M.reload_view(buf, win, width)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
 
-  vim.api.nvim_win_set_config(win, {
-    title = config.options.title,
-    title_pos = 'center',
-  })
+  set_header_title(config.options.title)
+  set_header_text(VIEW_HEADER)
 
   -- Restore normal keymaps
-  set_header_text(VIEW_HEADER)
   M.setup_buffer_keymaps(buf, win, width)
 end
 
@@ -107,11 +115,7 @@ function M.open_edit_mode(buf, win, width)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, edit_lines)
 
   -- Update title to signal edit mode
-  vim.api.nvim_win_set_config(win, {
-    title = '✏️  Editing Peeksheet   ✏️',
-    title_pos = 'center',
-  })
-
+  set_header_title '✏️  Editing Peeksheet  ✏️'
   set_header_text(EDIT_HEADER)
 
   -- Write and return to view
@@ -186,8 +190,6 @@ function M.open()
     col = col,
     row = row,
     border = { '', '', '', '│', '╯', '─', '╰', '│' },
-    title = config.options.title,
-    title_pos = 'center',
   })
 
   -- Apply keymaps
