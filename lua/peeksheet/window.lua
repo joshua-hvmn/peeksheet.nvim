@@ -24,6 +24,7 @@ function M.build_lines(path, width)
     table.insert(lines, '')
     table.insert(lines, make_separator(width))
     table.insert(lines, '')
+    keymap_section_start = #lines + 1
     local keymap_lines = require('peeksheet.keymaps').generate_keymap_section()
     vim.list_extend(lines, keymap_lines)
   end
