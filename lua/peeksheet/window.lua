@@ -1,19 +1,52 @@
 local M = {}
 local config = require 'peeksheet.config'
 
+local header_buf, header_win = nil, nil
+local keymap_section_start = nil
+
+local VIEW_HEADER = '  q: close   /: search   e: edit or remap'
+local EDIT_HEADER = '  w: write   C: cancel                   '
+
 local function make_separator(width)
   return string.rep('─', width)
 end
 
-local keymap_section_start = nil
+local function set_header_text(text)
+  if header_buf and vim.api.nvim_buf_is_valid(header_buf) then
+    vim.api.nvim_set_option_value('modifiable', true, { buf = header_buf })
+    vim.api.nvim_buf_set_lines(header_buf, 0, -1, false, { text })
+    vim.api.nvim_set_option_value('modifiable', false, { buf = header_buf })
+  end
+end
+
+local function open_header(width, col, row)
+  header_buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(header_buf, 0, -1, false, { VIEW_HEADER })
+
+  header_win = vim.api.nvim_open_win(header_buf, false, {
+    relative = 'editor',
+    width = width,
+    height = 1,
+    col = col,
+    row = row,
+    style = 'minimal',
+    border = { '╭', '─', '╮', '│', '', '', '', '│' },
+    focusable = false,
+    zindex = 60,
+  })
+
+  vim.api.nvim_set_option_value('winhl', 'Normal:NormalFloat', { win = header_win })
+end
+
+local function close_header()
+  if header_win and vim.api.nvim_win_is_valid(header_win) then
+    vim.api.nvim_win_close(header_win, true)
+  end
+  header_win, header_buf = nil, nil
+end
 
 function M.build_lines(path, width)
-  -- Header hint bar
-  local lines = {
-    '  q: close   /: search   e: edit or remap',
-    make_separator(width),
-    '',
-  }
+  local lines = {}
 
   -- Peeksheet.md content
   local md_lines = vim.fn.filereadable(path) == 1 and vim.fn.readfile(path) or { '# Peeksheet not found', '', 'Expected at: ' .. path }
@@ -32,6 +65,18 @@ function M.build_lines(path, width)
   return lines
 end
 
+local function apply_view_options(win)
+  vim.wo[win].number = false
+  vim.wo[win].relativenumber = false
+  vim.wo[win].cursorline = false
+  vim.wo[win].signcolumn = 'no'
+  vim.wo[win].foldcolumn = '0'
+  vim.wo[win].colorcolumn = ''
+  vim.wo[win].list = false
+  vim.wo[win].conceallevel = 2
+  vim.wo[win].concealcursor = 'nc'
+end
+
 function M.reload_view(buf, win, width)
   local path = config.options.peeksheet_path
   local lines = M.build_lines(path, width)
@@ -39,7 +84,6 @@ function M.reload_view(buf, win, width)
   vim.api.nvim_set_option_value('modifiable', true, { buf = buf })
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
-  -- vim.api.nvim_set_option_value('readonly', true, { buf = buf })
 
   vim.api.nvim_win_set_config(win, {
     title = config.options.title,
@@ -47,6 +91,7 @@ function M.reload_view(buf, win, width)
   })
 
   -- Restore normal keymaps
+  set_header_text(VIEW_HEADER)
   M.setup_buffer_keymaps(buf, win, width)
 end
 
@@ -55,7 +100,6 @@ function M.open_edit_mode(buf, win, width)
 
   -- Unlock buffer
   vim.api.nvim_set_option_value('modifiable', true, { buf = buf })
-  -- vim.api.nvim_set_option_value('readonly', false, { buf = buf })
 
   -- Load raw peeksheet.md content
   local edit_lines = vim.fn.filereadable(path) == 1 and vim.fn.readfile(path) or { '# My Peeksheet', '', 'Add your custom notes here.' }
@@ -64,9 +108,11 @@ function M.open_edit_mode(buf, win, width)
 
   -- Update title to signal edit mode
   vim.api.nvim_win_set_config(win, {
-    title = '✏️  Editing Peeksheet - w to write, C to cancel  ✏️',
+    title = '✏️  Editing Peeksheet   ✏️',
     title_pos = 'center',
   })
+
+  set_header_text(EDIT_HEADER)
 
   -- Write and return to view
   vim.keymap.set('n', 'w', function()
@@ -84,6 +130,7 @@ end
 
 function M.setup_buffer_keymaps(buf, win, width)
   local function close_win()
+    close_header()
     if vim.api.nvim_win_is_valid(win) then
       vim.api.nvim_win_close(win, true)
     end
@@ -130,42 +177,36 @@ function M.open()
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 
+  open_header(width, col, row - 2)
+
   local win = vim.api.nvim_open_win(buf, true, {
     relative = 'editor',
     width = width,
-    height = height - 1,
+    height = height,
     col = col,
     row = row,
-    -- style = 'minimal',
-    border = config.options.border,
+    border = { '', '', '', '│', '╯', '─', '╰', '│' },
     title = config.options.title,
     title_pos = 'center',
   })
 
-  -- manually suppress what minimal would have suppressed, except statusline
-  vim.wo[win].number = false
-  vim.wo[win].relativenumber = false
-  vim.wo[win].cursorline = false
-  vim.wo[win].signcolumn = 'no'
-  vim.wo[win].foldcolumn = '0'
-  vim.wo[win].colorcolumn = ''
-  vim.wo[win].list = false
-
   -- Apply keymaps
+  apply_view_options(win)
   M.setup_buffer_keymaps(buf, win, width)
 
   -- Styling
   vim.api.nvim_set_option_value('filetype', 'markdown', { buf = buf })
-  vim.wo[win].conceallevel = 2
-  vim.wo[win].concealcursor = 'nc'
   pcall(vim.treesitter.start, buf, 'markdown')
 
   -- Lock the buffer
   vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
-  -- vim.api.nvim_set_option_value('readonly', true, { buf = buf })
-
-  -- wipe buffer
   vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf })
+
+  vim.api.nvim_create_autocmd('WinClosed', {
+    pattern = tostring(win),
+    once = true,
+    callback = close_header,
+  })
 
   return buf, win
 end
