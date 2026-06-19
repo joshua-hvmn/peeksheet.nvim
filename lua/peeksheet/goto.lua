@@ -17,9 +17,10 @@ local function get_map_source(lhs)
   local filepath = output:match 'Last set from ([^\n]+)%s+line %d+'
   local lnum = output:match 'Last set from [^\n]+ line (%d+)'
 
+  vim.notify('source: ' .. tostring(filepath), vim.log.levels.INFO)
+
   if filepath and lnum then
     filepath = vim.fn.expand(filepath)
-    vim.notify('source: ' .. tostring(filepath), vim.log.levels.INFO)
     return filepath, tonumber(lnum)
   end
 
