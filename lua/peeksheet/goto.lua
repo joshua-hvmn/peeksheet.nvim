@@ -19,7 +19,7 @@ local function get_map_source(lhs)
 
   if filepath and lnum then
     filepath = vim.fn.expand(filepath)
-    -- vim.notify('source: ' .. tostring(filepath), vim.log.levels.INFO)
+    vim.notify('source: ' .. tostring(filepath), vim.log.levels.INFO)
     return filepath, tonumber(lnum)
   end
 
