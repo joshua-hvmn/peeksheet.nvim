@@ -1,36 +1,19 @@
 local M = {}
+local config = require 'peeksheet.config'
 
 -- parse lhs out of peeksheet keymap line
 local function parse_lhs(line)
   return line:match '^%- `([^`]+)`'
 end
 
--- verbose map to find source file and line number
-local function get_map_source(map)
-  local ok, output = pcall(vim.fn.execute, 'verbose nmap ' .. vim.fn.escape(map.lhs, ' '))
-
-  if not ok or not output then
-    return nil, nil
-  end
-
-  local filepath = output:match 'Last set from ([^\n]+)%s+line %d+'
-  local lnum = output:match 'Last set from [^\n]+ line (%d+)'
-
-  if filepath and lnum then
-    return vim.fn.expand(filepath), tonumber(lnum)
-  end
-
-  return nil, nil
-end
-
 -- find existing keymap entry to preserve rhs/opts
 local function find_keymap(lhs)
   local leader = vim.g.mapleader or ' '
   local raw_lhs = lhs:gsub('<leader>', leader)
+
   local function normalize(s)
     return s:lower():gsub('%s+', '')
   end
-
   local norm = normalize(raw_lhs)
 
   for _, map in ipairs(vim.api.nvim_get_keymap 'n') do
@@ -48,6 +31,22 @@ local function find_keymap(lhs)
   return nil
 end
 
+-- search for keymaps
+local function find_lhs_in_file(filepath, lhs)
+  if vim.fn.filereadable(filepath) == 0 then
+    return nil
+  end
+
+  local file_lines = vim.fn.readfile(filepath)
+  for i, line in ipairs(file_lines) do
+    if line:find(lhs, 1, true) then
+      return i, line
+    end
+  end
+
+  return nil
+end
+
 -- rewrite lhs in file
 local function rewrite_lhs_in_file(filepath, lnum, old_lhs, new_lhs)
   local file_lines = vim.fn.readfile(filepath)
@@ -56,13 +55,16 @@ local function rewrite_lhs_in_file(filepath, lnum, old_lhs, new_lhs)
   end
 
   local target = file_lines[lnum]
-  local escaped_old = vim.pesc(old_lhs)
-
-  if not target:find(escaped_old) then
+  if not target:find(old_lhs, 1, true) then
     return false, 'Could not find lhs in source file: ' .. target
   end
 
-  file_lines[lnum] = target:gsub(escaped_old, vim.pesc(new_lhs), 1)
+  local prefix, suffix = target:match('^(.-)' .. vim.pesc(old_lhs) .. '(.*)$')
+  if not prefix then
+    return false, 'Could not isolate lhs in line'
+  end
+
+  file_lines[lnum] = prefix .. new_lhs .. suffix
 
   local result = vim.fn.writefile(file_lines, filepath)
   if result ~= 0 then
@@ -113,12 +115,11 @@ function M.remap_at_cursor(buf, win, reload_fn)
     return
   end
 
-  local filepath, lnum = get_map_source(map)
-  local config_dir = vim.fn.stdpath 'config'
-  local in_config = filepath and filepath:find(config_dir, 1, true)
+  local keymaps_file = config.options.keymaps_file
+  local lnum, source_line = find_lhs_in_file(keymaps_file, lhs)
 
-  if not in_config then
-    vim.notify('Keymap is defined in a plugin, not your config. Cannot edit permanently.', vim.log.levels.WARN)
+  if not lnum then
+    vim.notify('Could not find "' .. lhs .. '" in ' .. keymaps_file .. '. It may be defined elsewhere (like a plugin file).', vim.log.levels.WARN)
     return
   end
 
@@ -131,20 +132,22 @@ function M.remap_at_cursor(buf, win, reload_fn)
     end
 
     -- rewrite source file
-    local ok, err = rewrite_lhs_in_file(filepath, lnum, lhs, new_lhs)
+    local ok, err = rewrite_lhs_in_file(keymaps_file, lnum, lhs, new_lhs)
     if not ok then
       vim.notify('Failed to update source file: ' .. (err or 'unknown error'), vim.log.levels.ERROR)
       return
     end
 
     -- apply live so the session matches
-    local remapped = apply_live_remap(map, lhs, new_lhs)
+    local raw_lhs = lhs:gsub('<leader>', vim.g.mapleader or ' ')
+    local raw_new_lhs = new_lhs:gsub('<leader>', vim.g.mapleader or ' ')
+    local remapped = apply_live_remap(map, raw_lhs, raw_new_lhs)
     if not remapped then
       vim.notify('File updated but could not apply live remap.', vim.log.levels.WARN)
       return
     end
 
-    vim.notify(string.format('Remapped %s → %s (live + saved to %s:%d)', lhs, new_lhs, filepath, lnum), vim.log.levels.INFO)
+    vim.notify(string.format('Remapped %s → %s (live + saved to %s:%d)', lhs, new_lhs, keymaps_file, lnum), vim.log.levels.INFO)
 
     -- reload peeksheet
     reload_fn()

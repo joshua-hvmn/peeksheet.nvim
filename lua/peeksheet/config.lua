@@ -2,6 +2,7 @@ local M = {}
 
 M.defaults = {
   peeksheet_path = vim.fn.stdpath 'config' .. '/peeksheet.md',
+  keymaps_file = vim.fn.stdpath 'config' .. '/lua/core/keymaps.lua',
   width_ratio = 0.65,
   height_ratio = 0.75,
   title = '💡 Peeksheet 💡',
