@@ -10,14 +10,18 @@ local function get_map_source(lhs)
   local leader = vim.g.mapleader or ' '
   local raw_lhs = lhs:gsub('<leader>', leader)
   local ok, output = pcall(vim.fn.execute, 'verbose nmap ' .. raw_lhs)
+  vim.defer_fn(function()
+    -- vim.notify('source: ' .. tostring(filepath), vim.log.levels.INFO)
+    -- vim.notify('config: ' .. vim.fn.stdpath 'config', vim.log.levels.INFO)
+    vim.notify('raw output: [' .. tostring(output) .. ']', vim.log.levels.INFO)
+  end, 500)
+
   if not ok or not output then
     return nil, nil
   end
 
   local filepath = output:match 'Last set from ([^\n]+)%s+line %d+'
   local lnum = output:match 'Last set from [^\n]+ line (%d+)'
-
-  vim.notify('source: ' .. tostring(filepath), vim.log.levels.INFO)
 
   if filepath and lnum then
     filepath = vim.fn.expand(filepath)
