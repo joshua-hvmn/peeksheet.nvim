@@ -64,17 +64,17 @@ local function rewrite_lhs_in_file(filepath, lnum, old_lhs, new_lhs)
   end
 
   local target = file_lines[lnum]
-  local norm_target_line = normalize_ctrl_case(target):lower()
-  local norm_old = normalize_ctrl_case(old_lhs):lower()
+  local escaped_old = old_lhs:gsub('([^%w])', '%%%1')
 
-  local start_idx = norm_target_line:find(norm_old, 1, true)
+  local pattern = '(["\'])(' .. escaped_old .. ')(["\'])'
+  local start_idx, end_idx, q1, _, q2 = target:find(pattern)
+
   if not start_idx then
-    return false, 'Could not find lhs in source line: ' .. target
+    return false, 'Could not safely locate quoted lhs in source line.'
   end
 
-  local actual_old_len = #old_lhs
-  local prefix = target:sub(1, start_idx - 1)
-  local suffix = target:sub(start_idx + actual_old_len)
+  local prefix = target:sub(1, start_idx)
+  local suffix = target:sub(end_idx)
 
   file_lines[lnum] = prefix .. new_lhs .. suffix
 
