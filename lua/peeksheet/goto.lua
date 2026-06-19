@@ -6,13 +6,19 @@ local function parse_lhs(line)
   return line:match '^%- `([^`]+)`'
 end
 
+local function normalize_ctrl_case(s)
+  return s:gsub('<C%-(%a)>', function(letter)
+    return '<C-' .. letter:upper() .. '>'
+  end)
+end
+
 -- find existing keymap entry to preserve rhs/opts
 local function find_keymap(lhs)
   local leader = vim.g.mapleader or ' '
   local raw_lhs = lhs:gsub('<leader>', leader)
 
   local function normalize(s)
-    return s:lower():gsub('%s+', '')
+    return normalize_ctrl_case(s):lower():gsub('%s+', '')
   end
   local norm = normalize(raw_lhs)
 
@@ -37,9 +43,12 @@ local function find_lhs_in_file(filepath, lhs)
     return nil
   end
 
+  local norm_target = normalize_ctrl_case(lhs):lower()
+
   local file_lines = vim.fn.readfile(filepath)
   for i, line in ipairs(file_lines) do
-    if line:find(lhs, 1, true) then
+    local norm_line = normalize_ctrl_case(line):lower()
+    if norm_line:find(norm_target, 1, true) then
       return i, line
     end
   end
@@ -55,14 +64,17 @@ local function rewrite_lhs_in_file(filepath, lnum, old_lhs, new_lhs)
   end
 
   local target = file_lines[lnum]
-  if not target:find(old_lhs, 1, true) then
-    return false, 'Could not find lhs in source file: ' .. target
+  local norm_target_line = normalize_ctrl_case(target):lower()
+  local norm_old = normalize_ctrl_case(old_lhs):lower()
+
+  local start_idx = norm_target_line:find(norm_old, 1, true)
+  if not start_idx then
+    return false, 'Could not find lhs in source line: ' .. target
   end
 
-  local prefix, suffix = target:match('^(.-)' .. vim.pesc(old_lhs) .. '(.*)$')
-  if not prefix then
-    return false, 'Could not isolate lhs in line'
-  end
+  local actual_old_len = #old_lhs
+  local prefix = target:sub(1, start_idx - 1)
+  local suffix = target:sub(start_idx + actual_old_len)
 
   file_lines[lnum] = prefix .. new_lhs .. suffix
 
