@@ -5,87 +5,12 @@ local function make_separator(width)
   return string.rep('─', width)
 end
 
-function M.setup_buffer_keymaps(buf, win, raw_lines, width)
-  local function close_win()
-    if vim.api.nvim_win_is_valid(win) then
-      vim.api.nvim_win_close(win, true)
-    end
-  end
-
-  -- Close with q or esc
-  vim.keymap.set('n', 'q', close_win, { buffer = buf, silent = true, nowait = true })
-  vim.keymap.set('n', '<Esc>', close_win, { buffer = buf, silent = true, nowait = true })
-
-  -- Search Binding
-  if config.options.enable_search then
-    vim.keymap.set('n', '/', function()
-      require('peeksheet.search').start(buf)
-    end, { buffer = buf, silent = true, desc = 'Search Peeksheet' })
-  end
-
-  -- Edit peeksheet.md
-  vim.keymap.set('n', 'e', function()
-    M.open_edit_mode(buf, win)
-  end, { buffer = buf, silent = true, desc = 'Edit Peeksheet' })
-end
-
-function M.open_edit_mode(buf, win)
-  local path = config.options.peeksheet_path
-
-  -- Unlock buffer
-  vim.api.nvim_set_option_value('modifiable', true, { buf = buf })
-  vim.api.nvim_set_option_value('readonly', false, { buf = buf })
-
-  -- Load raw peeksheet.md content
-  local edit_lines = vim.fn.filereadable(path) == 1 and vim.fn.readfile(path) or { '# My Peeksheet', '', 'Add your custom notes here.' }
-
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, edit_lines)
-
-  -- Update title to signal edit mode
-  vim.api.nvim_win_set_config(win, {
-    title = '✏️  Editing Peeksheet  ✏️',
-    title_pos = 'center',
-  })
-
-  -- Write and return to view
-  vim.keymap.set('n', 'w', function()
-    local new_lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-    vim.fn.writefile(new_lines, path)
-    vim.notify('Peeksheet saved.', vim.log.levels.INFO)
-    M.reload_view(buf, win)
-  end, { buffer = buf, silent = true, nowait = true, desc = 'Save Peeksheet' })
-
-  -- Cancel edit and return to view
-  vim.keymap.set('n', '<Esc>', function()
-    M.reload_view(buf, win)
-  end, { buffer = buf, silent = true, nowait = true })
-end
-
-function M.reload_view(buf, win)
-  local path = config.options.peeksheet_path
-  local ui = vim.api.nvim_list_uis()[1]
-  local width = math.floor(ui.width * config.options.width_ratio)
-
-  local lines = M.build_lines(path, width)
-
-  vim.api.nvim_set_option_value('modifiable', true, { buf = buf })
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
-  vim.api.nvim_set_option_value('readonly', true, { buf = buf })
-
-  vim.api.nvim_win_set_config(win, {
-    title = config.options.title,
-    title_pos = 'center',
-  })
-
-  -- Restore normal keymaps
-  M.setup_buffer_keymaps(buf, win, lines, width)
-end
+local keymap_section_start = nil
 
 function M.build_lines(path, width)
   -- Header hint bar
   local lines = {
-    '  q: close   /: search   e: edit peeksheet.md',
+    '  q: close   /: search   e: edit or remap',
     make_separator(width),
     '',
   }
@@ -106,7 +31,89 @@ function M.build_lines(path, width)
   return lines
 end
 
--- ------
+function M.reload_view(buf, win, width)
+  local path = config.options.peeksheet_path
+  local lines = M.build_lines(path, width)
+
+  vim.api.nvim_set_option_value('modifiable', true, { buf = buf })
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
+  vim.api.nvim_set_option_value('readonly', true, { buf = buf })
+
+  vim.api.nvim_win_set_config(win, {
+    title = config.options.title,
+    title_pos = 'center',
+  })
+
+  -- Restore normal keymaps
+  M.setup_buffer_keymaps(buf, win, width)
+end
+
+function M.open_edit_mode(buf, win, width)
+  local path = config.options.peeksheet_path
+
+  -- Unlock buffer
+  vim.api.nvim_set_option_value('modifiable', true, { buf = buf })
+  vim.api.nvim_set_option_value('readonly', false, { buf = buf })
+
+  -- Load raw peeksheet.md content
+  local edit_lines = vim.fn.filereadable(path) == 1 and vim.fn.readfile(path) or { '# My Peeksheet', '', 'Add your custom notes here.' }
+
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, edit_lines)
+
+  -- Update title to signal edit mode
+  vim.api.nvim_win_set_config(win, {
+    title = '✏️  Editing Peeksheet - w to write, C to cancel  ✏️',
+    title_pos = 'center',
+  })
+
+  -- Write and return to view
+  vim.keymap.set('n', 'w', function()
+    local new_lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    vim.fn.writefile(new_lines, path)
+    vim.notify('Peeksheet saved.', vim.log.levels.INFO)
+    M.reload_view(buf, win, width)
+  end, { buffer = buf, silent = true, nowait = true, desc = 'Save Peeksheet' })
+
+  -- Cancel edit and return to view
+  vim.keymap.set('n', 'C', function()
+    M.reload_view(buf, win, width)
+  end, { buffer = buf, silent = true, nowait = true })
+end
+
+function M.setup_buffer_keymaps(buf, win, width)
+  local function close_win()
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+  end
+
+  -- Close with q or esc
+  vim.keymap.set('n', 'q', close_win, { buffer = buf, silent = true, nowait = true })
+  vim.keymap.set('n', '<Esc>', close_win, { buffer = buf, silent = true, nowait = true })
+
+  -- Search Binding
+  if config.options.enable_search then
+    vim.keymap.set('n', '/', function()
+      require('peeksheet.search').start(buf)
+    end, { buffer = buf, silent = true, desc = 'Search Peeksheet' })
+  end
+
+  -- Edit peeksheet.md
+  vim.keymap.set('n', 'e', function()
+    local cursor = vim.api.nvim_win_get_cursor(win)
+    local cursor_line = cursor[1]
+
+    if keymap_section_start and cursor_line >= keymap_section_start then
+      require('peeksheet.goto').remap_at_cursor(buf, win, function()
+        M.reload_view(buf, win, width)
+      end)
+    else
+      M.open_edit_mode(buf, win, width)
+    end
+  end, { buffer = buf, silent = true, desc = 'Edit Peeksheet' })
+end
+
 function M.open()
   -- Dynamic size
   local ui = vim.api.nvim_list_uis()[1]
@@ -135,7 +142,7 @@ function M.open()
   })
 
   -- Apply keymaps
-  M.setup_buffer_keymaps(buf, win, lines, width)
+  M.setup_buffer_keymaps(buf, win, width)
 
   -- Styling
   vim.api.nvim_set_option_value('filetype', 'markdown', { buf = buf })
