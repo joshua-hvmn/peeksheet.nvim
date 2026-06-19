@@ -7,16 +7,19 @@ end
 
 -- verbose map to find source file and line number
 local function get_map_source(lhs)
-  local ok, output = pcall(vim.fn.execute, 'verbose nmap ' .. lhs)
+  local leader = vim.g.mapleader or ' '
+  local raw_lhs = lhs:gsub('<leader>', leader)
+  local ok, output = pcall(vim.fn.execute, 'verbose nmap ' .. raw_lhs)
   if not ok or not output then
     return nil, nil
   end
 
-  local filepath = output:match 'Last set from ([^\n]+) line %d+'
+  local filepath = output:match 'Last set from ([^\n]+)%s+line %d+'
   local lnum = output:match 'Last set from [^\n]+ line (%d+)'
 
   if filepath and lnum then
     filepath = vim.fn.expand(filepath)
+    -- vim.notify('source: ' .. tostring(filepath), vim.log.levels.INFO)
     return filepath, tonumber(lnum)
   end
 
@@ -25,11 +28,13 @@ end
 
 -- find existing keymap entry to preserve rhs/opts
 local function find_keymap(lhs)
+  local leader = vim.g.mapleader or ' '
+  local raw_lhs = lhs:gsub('<leader>', leader)
   local function normalize(s)
     return s:lower():gsub('%s+', '')
   end
 
-  local norm = normalize(lhs)
+  local norm = normalize(raw_lhs)
 
   for _, map in ipairs(vim.api.nvim_get_keymap 'n') do
     if normalize(map.lhs) == norm then
